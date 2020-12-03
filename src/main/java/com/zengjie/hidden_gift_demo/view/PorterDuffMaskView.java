@@ -38,13 +38,13 @@ public class PorterDuffMaskView extends View {
     private ValueAnimator mAnim;
     private int mAnimValue = 0;
     private int mRoundCorner = CommonUtils.dip2px(getContext(),25); //圆角矩形的角度
-    private int mCoverColor = Color.parseColor("#99000000");//遮罩的颜色
-
+    private final int BEVEL_EDGE_MARGIN = CommonUtils.dip2px(getContext(), 30);
     private Xfermode mXfermode;
+
     private PorterDuff.Mode mPorterDuffMode = PorterDuff.Mode.SRC_IN;
     private int mWidth;
     private int mHeight;
-
+    private int mMaskRight;
     private final int MASK_HEIGHT = CommonUtils.dip2px(getContext(), 42);
     private Bitmap mSrcBitmap;
 
@@ -96,18 +96,19 @@ public class PorterDuffMaskView extends View {
         //重置Path
         mClipPath.reset();
         mClipPath2.reset();
-        //绘制圆形遮罩
-        mClipPath.addRoundRect(mMaskLeft, mMaskTop, mAnimValue
-                , mMaskTop + CommonUtils.dip2px(getContext(), 42), mRoundCorner, mRoundCorner, Path.Direction.CCW);
+        //矩形遮罩区域
+        mClipPath.addRect(mMaskLeft, mMaskTop, mMaskRight
+                , mMaskTop + MASK_HEIGHT, /*mRoundCorner, 0,*/ Path.Direction.CCW);
         //设置三角形区域
         mClipPath2.moveTo(mAnimValue, mMaskTop);
         mClipPath2.lineTo(mAnimValue, mMaskTop + MASK_HEIGHT);
-        mClipPath2.lineTo(mAnimValue - CommonUtils.dip2px(getContext(), 30), mMaskTop + MASK_HEIGHT);
+        mClipPath2.lineTo(mAnimValue - BEVEL_EDGE_MARGIN, mMaskTop + MASK_HEIGHT);
         mClipPath2.close();
         //裁切三角形
         mClipPath.op(mClipPath2,Path.Op.DIFFERENCE);
-        //绘制三角形
+        //绘制遮罩
         canvas.drawPath(mClipPath,mPaint);
+
         //设置paint的 xfermode
         mPaint.setXfermode(mXfermode);
         //画遮罩的矩形(Source image)
@@ -136,7 +137,7 @@ public class PorterDuffMaskView extends View {
 
     private void startAnim() {
         stopAnim();
-        mAnim = ValueAnimator.ofInt(mPadding, mWidth - mPadding);
+        mAnim = ValueAnimator.ofInt(mPadding, mWidth - mPadding + BEVEL_EDGE_MARGIN);
         if (mAnim != null) {
             mAnim.setDuration(1600);
             mAnim.setInterpolator(new LinearInterpolator());
@@ -145,6 +146,11 @@ public class PorterDuffMaskView extends View {
                 @Override
                 public void onAnimationUpdate(ValueAnimator animation) {
                     mAnimValue = (int)animation.getAnimatedValue();
+                    if (mAnimValue <= mWidth - mPadding){
+                        mMaskRight = mAnimValue;
+                    } else {
+                        mMaskRight = mWidth - mPadding;
+                    }
                    invalidate();
                 }
             });
